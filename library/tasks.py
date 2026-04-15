@@ -2,6 +2,8 @@ from celery import shared_task
 from .models import Loan
 from django.core.mail import send_mail
 from django.conf import settings
+import logging
+logger=logging.getLogger(__name__)
 
 @shared_task
 def send_loan_notification(loan_id):
@@ -16,5 +18,20 @@ def send_loan_notification(loan_id):
             recipient_list=[member_email],
             fail_silently=False,
         )
+        logger.info(f"Loan notification sent to {member_email} for loan ID {loan_id}")
     except Loan.DoesNotExist:
+        logger.error(f"Loan ID {loan_id} does not exist.")
         pass
+    except Exception as e:
+        logger.error(f"An error occured{loan_id}: {str(e)}")
+        pass
+@shared_task
+def check_overdue_loans():
+    overdue_loans=Loan.objects.filter(is_returned=False, due_date__lt=datetime.now())
+    for loan in overdue_loans:
+        send_mail(
+            'Overdue Book Reminder',
+            f'Book "{loan.book.title}" is overdue.',
+            'librarysample@.com,' 
+            [loan.member.email]
+        )

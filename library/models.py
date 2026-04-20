@@ -1,5 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
+from datetime import timedelta
 
 class Author(models.Model):
     first_name = models.CharField(max_length=100)
@@ -35,12 +37,27 @@ class Member(models.Model):
     def __str__(self):
         return self.user.username
 
+def default_due_date():
+    return timezone.now().date() + timedelta(days=14)
+
 class Loan(models.Model):
     book = models.ForeignKey(Book, related_name='loans', on_delete=models.CASCADE)
     member = models.ForeignKey(Member, related_name='loans', on_delete=models.CASCADE)
     loan_date = models.DateField(auto_now_add=True)
     return_date = models.DateField(null=True, blank=True)
     is_returned = models.BooleanField(default=False)
-
+    due_date = models.DateField(default=default_due_date)
     def __str__(self):
         return f"{self.book.title} loaned to {self.member.user.username}"
+
+class Backlink(models.Model):
+    source_url = models.URLField(max_length=2000)
+    target_url = models.URLField(max_length=2000)
+    anchor_text = models.TextField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("source_url", "target_url")
+
+    def __str__(self):
+        return f"{self.source_url} -> {self.target_url}"
